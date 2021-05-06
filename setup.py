@@ -1,4 +1,6 @@
-from setuptools import setup
+#!/usr/bin/env python
+
+from setuptools import setup, find_packages
 
 setup(name='tap-airtable',
       version='0.0.3',
@@ -20,7 +22,7 @@ setup(name='tap-airtable',
           'requests==2.20.1',
           'simplejson==3.11.1',
           'singer-python==5.4.0',
-          'six==1.11.0',
+          'six==1.16.0',
           'tzlocal==1.5.1',
           'urllib3==1.24.2'
       ],
