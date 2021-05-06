@@ -2,6 +2,7 @@ from tap_airtable.airtable_utils import JsonUtils, Relations
 import requests
 import json
 import singer
+import re
 from singer.catalog import Catalog, CatalogEntry
 
 
@@ -46,17 +47,36 @@ class Airtable(object):
         streams = properties['streams']
 
         for stream in streams:
-            table = stream['table_name'].replace('/', '')
-            table = table.replace(' ', '')
-            table = table.replace('{', '')
-            table = table.replace('}', '')
+            table = re.sub('[^0-9a-zA-Z_]+', '_', stream['table_name']).lower()
             schema = stream['metadata']
+            properties = {}
+
+            # Clean field names
+            for f_name in schema['properties'].keys():
+                clean_f_name = re.sub('[^0-9a-zA-Z_]+', '_', f_name).lower()
+                properties[clean_f_name] = schema['properties'][f_name]
+
+            schema['properties'] = properties
 
             if table != 'relations' and schema['selected']:
                 response = Airtable.get_response(config['base_id'], schema["name"])
                 if response.json().get('records'):
+                    response_records = response.json().get('records')
+                    clean_response_records = []
+
+                    for response_record in response_records:
+                        fields = {}
+
+                        # Clean field names
+                        for f_name in response_record['fields'].keys():
+                            clean_f_name = re.sub('[^0-9a-zA-Z_]+', '_', f_name).lower()
+                            fields[clean_f_name] = response_record['fields'][f_name]
+
+                        response_record['fields'] = fields
+                        clean_response_records.append(response_record)
+
                     records = JsonUtils.match_record_with_keys(schema,
-                                                               response.json().get('records'),
+                                                               clean_response_records,
                                                                config['remove_emojis'])
 
                     singer.write_schema(table, schema, 'id')
