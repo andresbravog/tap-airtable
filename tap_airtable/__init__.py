@@ -30,6 +30,8 @@ CONFIG = {
     "remove_emojis": False
 }
 
+STATE = {}
+
 class JsonUtils(object):
 
     @classmethod
@@ -165,6 +167,9 @@ class Airtable(object):
             schema['properties'] = properties
 
             if table != 'relations' and schema['selected']:
+                STATE.update(singer.set_currently_syncing(STATE, table))
+                singer.write_state(STATE)
+
                 response = Airtable.get_response(config['base_id'], schema["name"])
                 if response.json().get('records'):
                     response_records = response.json().get('records')
@@ -208,6 +213,10 @@ class Airtable(object):
         singer.write_schema('relations', relations_table, 'id')
         singer.write_records('relations', Relations.get_records())
 
+        STATE.update(singer.set_currently_syncing(STATE, None))
+        singer.write_state(STATE)
+        LOGGER.info("Sync completed")
+
     @classmethod
     def get_response(cls, base_id, table, offset=None):
 
@@ -225,7 +234,7 @@ def main():
     args = utils.parse_args(REQUIRED_CONFIG_KEYS)
 
     CONFIG.update(args.config)
-    STATE = {}
+    STATE.update({})
 
     if args.state:
         STATE.update(args.state)
